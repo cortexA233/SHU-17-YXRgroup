@@ -1,5 +1,6 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from PyQt5.QtGui import QPalette, QPixmap, QBrush, QIcon, QPainter
+from PyQt5.QtWidgets import QMainWindow,QApplication,QTextEdit,QAction,QFileDialog
 from PyQt5 import QtCore, QtGui, QtWidgets, Qt
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import *
@@ -23,6 +24,22 @@ class Runthread(QtCore.QThread):
         # self.wait()
     def run(self):
         winsound.PlaySound("报警", winsound.SND_NOSTOP)
+class Drowpic(QtCore.QThread):
+    _signal = pyqtSignal(str)  # 通过类成员对象定义信号对象
+    def __init__(self):
+        super(Drowpic, self).__init__()
+    def __del__(self):
+        pass
+        # self.wait()
+    def run(self):
+        time = datetime.datetime.now().strftime("%Y-%m-%dps%H-%M-%S")
+        path = 'history/' + time+'.txt'
+        print(path)
+        with open(file="123.txt", mode='r+') as f1:
+            data = f1.read()
+        with open(file=path, mode='a+', encoding="utf-8") as f2:
+            f2.write(data)
+        self._signal.emit(str(path))
 
 class Runthread_1(QtCore.QThread):
     _signal = pyqtSignal(str)
@@ -50,13 +67,11 @@ class hello_mainWindow(QtWidgets.QMainWindow):
         super(hello_mainWindow, self).__init__()
         self.setupUi(self)
         self.retranslateUi(self)
-        # sys.path.append("C:/Users/ASUA/Desktop/platform/trunk/wmx")
-        # client_file=__import__("Client")
-        # self=
+
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(550, 369)
-        # MainWindow.setStyleSheet('background-image: url(ui_picture_1.png)')
+        MainWindow.resize(550, 380)#550, 480
+
         palette = QPalette()
         palette.setBrush(QPalette.Background, QBrush(QPixmap('ui_picture.png')))
         MainWindow.setPalette(palette)
@@ -87,12 +102,11 @@ class hello_mainWindow(QtWidgets.QMainWindow):
         self.label_2 = QtWidgets.QLabel(self.centralwidget)
         self.label_2.setGeometry(QtCore.QRect(200, 50, 177, 31))
         self.label_2.setObjectName("label_2")
-        MainWindow.setCentralWidget(self.centralwidget)
-        MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 550, 22))
         self.menubar.setObjectName("menubar")
         MainWindow.setMenuBar(self.menubar)
+        MainWindow.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
@@ -103,9 +117,26 @@ class hello_mainWindow(QtWidgets.QMainWindow):
         self.pushButton_3.clicked.connect(self.pol)
         self.pushButton_4.clicked.connect(self.history)
         self.pushButton_5.clicked.connect(self.limit)
+        #textEdit设置
+        openfile = QAction(QIcon(r'history'), 'open', self)
+        openfile.setShortcut("Ctrl + 0")
+        openfile.setStatusTip('open new file')
+        openfile.triggered.connect(self.showDialog)
+        filemune = self.menubar.addMenu('选择历史记录')
+        filemune.addAction(openfile)
+
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
+    def showDialog(self):
+        fname = QFileDialog.getOpenFileName(self,'open file', 'history')
+        try:
+            dr = global_cli.draw_pic(fname[0])
+            print(dr)
+        except FileNotFoundError as err:
+            pass
+
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
@@ -120,9 +151,13 @@ class hello_mainWindow(QtWidgets.QMainWindow):
         self.label_2.setText(_translate("MainWindow", "状态显示"))
 
     def history(self):
-        main_client = Client()
-        main_client.draw_pic()
+        self.thread_2 = Drowpic()
+        self.thread_2.start()
+        self.thread_2._signal.connect(self.Path)
         print('历史记录')
+    def Path(self,path):
+        dr = global_cli.draw_pic(path)
+        print(dr)
 
     def alarm(self):
         st, msg = global_cli.download()
